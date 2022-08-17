@@ -11,11 +11,11 @@ async function bootstrap() {
   app.connectMicroservice({
     transport: Transport.TCP,
     options: {
-      port: port,
+      port: 3001,
     },
   });
   app.useGlobalPipes(new ValidationPipe());
   await app.startAllMicroservices();
-  await app.listen(port);
+  await app.listen(3002);
 }
 bootstrap();
