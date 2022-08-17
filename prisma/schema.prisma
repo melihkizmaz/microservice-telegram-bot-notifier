@@ -1,0 +1,29 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model TelegramClient{
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  token String @unique()
+  webHookUrl String
+  chat_id Int
+  messages Message[]
+}
+model Message{
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+  from Int
+  to Int
+  type String
+  text String
+  client TelegramClient @relation(fields: [clientId], references: [id])
+  clientId String @db.ObjectId
+  createdAt DateTime
+}
