@@ -50,7 +50,7 @@ export class ClientService {
   async listClients(): Promise<TelegramClient[]> {
     return await this.prisma.telegramClient.findMany();
   }
-  async listByIdClient(id: string): Promise<TelegramClient> {
+  async listClientById(id: string): Promise<TelegramClient> {
     return await this.prisma.telegramClient.findUnique({ where: { id } });
   }
   async updateClient(

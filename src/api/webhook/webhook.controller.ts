@@ -21,7 +21,7 @@ export class WebhookController {
     @Body() messageBody: MessageData,
     @Param('id') id: string,
   ): Promise<void> {
-    const client = await this.clientService.listByIdClient(id);
+    const client = await this.clientService.listClientById(id);
     if (!client) throw new NotFoundException('Client not found');
     const messageData = {
       from: Number(messageBody.message.from.id),

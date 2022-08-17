@@ -15,7 +15,9 @@ export class WebhookService {
     return await this.prisma.message.create({ data: createMessage });
   }
   async sendNotification(url: string, sendWebhookDto: SendNotification) {
-    const $result = this.http.post<void>(url, sendWebhookDto);
+    const filteredNotificationDto = { ...sendWebhookDto };
+    delete filteredNotificationDto.clientId;
+    const $result = this.http.post<void>(url, filteredNotificationDto);
     await lastValueFrom($result);
   }
 }

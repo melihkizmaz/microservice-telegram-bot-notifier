@@ -45,7 +45,7 @@ export class ClientController {
   @Get('list/:id')
   async findOne(@Param('id') id: string): Promise<TelegramClient | string> {
     if (!Types.ObjectId.isValid(id)) return 'Invalid id';
-    return this.clientService.listByIdClient(id);
+    return this.clientService.listClientById(id);
   }
   @Patch('update/:id')
   async update(
