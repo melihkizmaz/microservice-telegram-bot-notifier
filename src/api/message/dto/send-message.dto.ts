@@ -2,7 +2,7 @@ import { IsNotEmpty } from 'class-validator';
 
 export class SendMessageDto {
   @IsNotEmpty()
-  token: string;
+  clientId: string;
   @IsNotEmpty()
   chat_id: string;
   @IsNotEmpty()
