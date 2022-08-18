@@ -7,6 +7,7 @@ import { WebhookModule } from './api/webhook/webhook.module';
 import configuration from './config/configuration';
 import { APP_FILTER } from '@nestjs/core';
 import { AllExceptionsFilter } from './filters/all-exeption.filter';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { AllExceptionsFilter } from './filters/all-exeption.filter';
     ClientModule,
     MessageModule,
     WebhookModule,
+    AuthModule,
   ],
   controllers: [],
   providers: [

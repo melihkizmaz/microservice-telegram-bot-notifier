@@ -12,6 +12,7 @@ import { lastValueFrom, map } from 'rxjs';
 import { Types } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
 import { GetMeResult } from '../message/dto/getme-result.inteface';
+import { ICreateClient } from './dto/create-client.interface';
 
 @Injectable()
 export class ClientService {
@@ -24,50 +25,63 @@ export class ClientService {
     this.telegramBaseUrl = configService.get('telegramBaseUrl');
   }
 
-  async createClient(
-    createClientDto: CreateClientDto,
-  ): Promise<TelegramClient> {
+  async createClient(createClient: ICreateClient): Promise<TelegramClient> {
     const $getMeResult = this.http
-      .get<GetMeResult>(`${this.telegramBaseUrl}${createClientDto.token}/getMe`)
+      .get<GetMeResult>(`${this.telegramBaseUrl}${createClient.token}/getMe`)
       .pipe(map((res) => res.data));
     const getMeResult = await lastValueFrom($getMeResult);
     if (!getMeResult.ok) throw new ForbiddenException(getMeResult.description);
     const client = await this.prisma.telegramClient.findFirst({
-      where: { token: createClientDto.token },
+      where: { token: createClient.token },
     });
     if (client) throw new ConflictException('Client token already used');
 
     const createObject = {
-      id: createClientDto._id,
+      id: createClient._id,
       chat_id: getMeResult.result.id,
-      ...createClientDto,
+      ...createClient,
     };
     delete createObject._id;
     return await this.prisma.telegramClient.create({
       data: createObject,
     });
   }
-  async listClients(): Promise<TelegramClient[]> {
-    return await this.prisma.telegramClient.findMany();
+  async listClients(userId: Types.ObjectId): Promise<TelegramClient[]> {
+    return await this.prisma.telegramClient.findMany({
+      where: { userId: userId.toString() },
+    });
   }
-  async listClientById(id: string): Promise<TelegramClient> {
-    return await this.prisma.telegramClient.findUnique({ where: { id } });
+  async listClientById(
+    id: string,
+    userId: Types.ObjectId,
+  ): Promise<TelegramClient> {
+    await this.checkClientHavePermission(id, userId);
+    return await this.prisma.telegramClient.findUnique({
+      where: { id },
+    });
+  }
+  async listClientByIdForWebhook(id: string): Promise<TelegramClient> {
+    return await this.prisma.telegramClient.findUnique({
+      where: { id },
+    });
   }
   async updateClient(
     id: string,
     createClientDto: CreateClientDto,
+    userId: Types.ObjectId,
   ): Promise<TelegramClient> {
+    await this.checkClientHavePermission(id, userId);
     return await this.prisma.telegramClient.update({
       where: { id },
       data: createClientDto,
     });
   }
-  async deleteClient(id: string): Promise<TelegramClient> {
+  async deleteClient(
+    id: string,
+    userId: Types.ObjectId,
+  ): Promise<TelegramClient> {
+    await this.checkClientHavePermission(id, userId);
     return await this.prisma.telegramClient.delete({ where: { id } });
-  }
-
-  createMongoId(): string {
-    return new Types.ObjectId().toHexString();
   }
 
   async setWebhook(url: string): Promise<SetWebhookResult> {
@@ -78,5 +92,21 @@ export class ClientService {
       return err.response.data;
     });
     return result;
+  }
+  createMongoId(): string {
+    return new Types.ObjectId().toHexString();
+  }
+  private async checkClientHavePermission(
+    clientId: string,
+    userId: Types.ObjectId,
+  ): Promise<void> {
+    const client = await this.prisma.telegramClient.findUnique({
+      where: { id: clientId.toString() },
+    });
+    if (!client) throw new ForbiddenException('Client not found');
+    if (client.userId.toString() !== userId.toString())
+      throw new ForbiddenException('You are not allowed to access this client');
+
+    console.log('ok');
   }
 }

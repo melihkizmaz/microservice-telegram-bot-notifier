@@ -1,5 +1,7 @@
 import { HttpService } from '@nestjs/axios';
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Types } from 'mongoose';
 import { lastValueFrom, map } from 'rxjs';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { WebhookService } from '../webhook/webhook.service';
@@ -9,29 +11,35 @@ import { SendMessageResult } from './dto/sendMessage-result.interface';
 
 @Injectable()
 export class MessageService {
+  private telegramBaseUrl: string;
   constructor(
     private readonly prisma: PrismaService,
     private readonly http: HttpService,
     private readonly webhookService: WebhookService,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.telegramBaseUrl = configService.get('telegramBaseUrl');
+  }
   async sendMessage(
-    url: string,
+    userId: Types.ObjectId,
     sendMessageDto: SendMessageDto,
   ): Promise<SendMessageResult> {
+    const client = await this.prisma.telegramClient.findUnique({
+      where: { id: sendMessageDto.clientId },
+    });
+    if (!client) throw new NotFoundException('Client not found');
+    if (client.userId !== userId.toString())
+      throw new NotFoundException(
+        'You are not allowed to send message to this client',
+      );
     const $result = this.http
       .get<SendMessageResult>(
-        `${url}?chat_id=${sendMessageDto.chat_id}&text=${sendMessageDto.text}`,
+        `${this.telegramBaseUrl}${client.token}/sendMessage?chat_id=${sendMessageDto.chat_id}&text=${sendMessageDto.text}`,
       )
       .pipe(map((res) => res.data));
     const result = await lastValueFrom($result).catch((err) => {
       return err.response.data;
     });
-    const client = await this.prisma.telegramClient.findFirst({
-      where: {
-        token: sendMessageDto.token,
-      },
-    });
-    if (!client) throw new NotFoundException('Client not found');
 
     const messageData = {
       from: client.chat_id,
