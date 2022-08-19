@@ -6,7 +6,7 @@ import {
   Post,
 } from '@nestjs/common';
 import { ClientService } from '../client/client.service';
-import { MessageData } from './dto/telegram-webhook.interface';
+import { IMessageData } from './dto/telegram-webhook.interface';
 import { WebhookService } from './webhook.service';
 
 @Controller('webhook')
@@ -18,11 +18,12 @@ export class WebhookController {
 
   @Post(':id')
   async webhook(
-    @Body() messageBody: MessageData,
+    @Body() messageBody: IMessageData,
     @Param('id') id: string,
   ): Promise<void> {
     const client = await this.clientService.listClientByIdForWebhook(id);
     if (!client) throw new NotFoundException('Client not found');
+
     const messageData = {
       from: Number(messageBody.message.from.id),
       to: Number(client.chat_id),
@@ -31,7 +32,9 @@ export class WebhookController {
       createdAt: new Date(),
       clientId: client.id,
     };
+
     await this.webhookService.createMessage(messageData);
+
     await this.webhookService.sendNotification(client.webHookUrl, messageData);
   }
 }

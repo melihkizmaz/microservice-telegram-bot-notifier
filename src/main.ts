@@ -8,13 +8,16 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
   const port = configService.get('port');
+
   app.connectMicroservice({
     transport: Transport.TCP,
     options: {
       port: '0.0.0.0',
     },
   });
+
   app.useGlobalPipes(new ValidationPipe());
+
   await app.startAllMicroservices();
   await app.listen(port);
 }

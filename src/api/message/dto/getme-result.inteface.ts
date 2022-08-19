@@ -1,4 +1,4 @@
-export interface GetMeResult {
+export interface IGetMeResult {
   ok: boolean;
   result?: {
     id: number;

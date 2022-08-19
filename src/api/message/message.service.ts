@@ -32,6 +32,7 @@ export class MessageService {
       throw new NotFoundException(
         'You are not allowed to send message to this client',
       );
+
     const $result = this.http
       .get<SendMessageResult>(
         `${this.telegramBaseUrl}${client.token}/sendMessage?chat_id=${sendMessageDto.chat_id}&text=${sendMessageDto.text}`,

@@ -29,6 +29,7 @@ export class ClientController {
     this.baseUrl = configService.get('baseUrl');
     this.telegramBaseUrl = configService.get('telegramBaseUrl');
   }
+
   @UseGuards(JwtAuthGuard)
   @Post('create')
   async create(
@@ -36,11 +37,13 @@ export class ClientController {
     @Body() createClientDto: CreateClientDto,
   ): Promise<TelegramClient> {
     const id = this.clientService.createMongoId();
+
     const setWebhookResult = await this.clientService.setWebhook(
       `${this.telegramBaseUrl}${createClientDto.token}/setWebhook?url=${this.baseUrl}/webhook/${id}`,
     );
     if (!setWebhookResult.ok)
       throw new ForbiddenException(setWebhookResult.description);
+
     return this.clientService.createClient({
       _id: id,
       ...createClientDto,
@@ -61,6 +64,7 @@ export class ClientController {
     @Param('id') id: string,
   ): Promise<TelegramClient | string> {
     if (!Types.ObjectId.isValid(id)) return 'Invalid id';
+
     return this.clientService.listClientById(id, user.id);
   }
 
@@ -72,6 +76,7 @@ export class ClientController {
     @Body() createClientDto: CreateClientDto,
   ): Promise<TelegramClient | string> {
     if (!Types.ObjectId.isValid(id)) return 'Invalid id';
+
     return this.clientService.updateClient(id, createClientDto, user.id);
   }
 
@@ -82,6 +87,7 @@ export class ClientController {
     @Param('id') id: string,
   ): Promise<TelegramClient | string> {
     if (!Types.ObjectId.isValid(id)) return 'Invalid id';
+
     return this.clientService.deleteClient(id, user.id);
   }
 }

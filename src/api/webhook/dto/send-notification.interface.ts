@@ -1,4 +1,4 @@
-export interface SendNotification {
+export interface ISendNotification {
   from: number;
   to: number;
   type: string;

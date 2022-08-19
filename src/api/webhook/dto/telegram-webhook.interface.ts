@@ -1,4 +1,4 @@
-export interface MessageData {
+export interface IMessageData {
   message: {
     from: {
       id: number;
