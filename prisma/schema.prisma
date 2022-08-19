@@ -29,6 +29,7 @@ model TelegramClient{
   userId String @db.ObjectId
   messages Message[]
 }
+
 model Message{
   id String @id @default(auto()) @map("_id") @db.ObjectId
   from Int

@@ -11,7 +11,7 @@ import { SetWebhookResult } from './dto/setwebhook-result.interface';
 import { lastValueFrom, map } from 'rxjs';
 import { Types } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
-import { GetMeResult } from '../message/dto/getme-result.inteface';
+import { IGetMeResult } from '../message/dto/getme-result.inteface';
 import { ICreateClient } from './dto/create-client.interface';
 
 @Injectable()
@@ -27,10 +27,11 @@ export class ClientService {
 
   async createClient(createClient: ICreateClient): Promise<TelegramClient> {
     const $getMeResult = this.http
-      .get<GetMeResult>(`${this.telegramBaseUrl}${createClient.token}/getMe`)
+      .get<IGetMeResult>(`${this.telegramBaseUrl}${createClient.token}/getMe`)
       .pipe(map((res) => res.data));
     const getMeResult = await lastValueFrom($getMeResult);
     if (!getMeResult.ok) throw new ForbiddenException(getMeResult.description);
+
     const client = await this.prisma.telegramClient.findFirst({
       where: { token: createClient.token },
     });
@@ -42,6 +43,7 @@ export class ClientService {
       ...createClient,
     };
     delete createObject._id;
+
     return await this.prisma.telegramClient.create({
       data: createObject,
     });
@@ -55,7 +57,8 @@ export class ClientService {
     id: string,
     userId: Types.ObjectId,
   ): Promise<TelegramClient> {
-    await this.checkClientHavePermission(id, userId);
+    await this.userPermissionGuard(id, userId);
+
     return await this.prisma.telegramClient.findUnique({
       where: { id },
     });
@@ -70,7 +73,8 @@ export class ClientService {
     createClientDto: CreateClientDto,
     userId: Types.ObjectId,
   ): Promise<TelegramClient> {
-    await this.checkClientHavePermission(id, userId);
+    await this.userPermissionGuard(id, userId);
+
     return await this.prisma.telegramClient.update({
       where: { id },
       data: createClientDto,
@@ -80,7 +84,8 @@ export class ClientService {
     id: string,
     userId: Types.ObjectId,
   ): Promise<TelegramClient> {
-    await this.checkClientHavePermission(id, userId);
+    await this.userPermissionGuard(id, userId);
+
     return await this.prisma.telegramClient.delete({ where: { id } });
   }
 
@@ -91,12 +96,13 @@ export class ClientService {
     const result = await lastValueFrom($result).catch((err) => {
       return err.response.data;
     });
+
     return result;
   }
   createMongoId(): string {
     return new Types.ObjectId().toHexString();
   }
-  private async checkClientHavePermission(
+  private async userPermissionGuard(
     clientId: string,
     userId: Types.ObjectId,
   ): Promise<void> {
@@ -106,7 +112,5 @@ export class ClientService {
     if (!client) throw new ForbiddenException('Client not found');
     if (client.userId.toString() !== userId.toString())
       throw new ForbiddenException('You are not allowed to access this client');
-
-    console.log('ok');
   }
 }

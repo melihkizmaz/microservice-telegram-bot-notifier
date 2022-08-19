@@ -6,7 +6,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
-import { JwtPayload } from './dto/jwt-payload.interface';
+import { IJwtPayload } from './dto/jwt-payload.interface';
 import { LoginUserDto } from './dto/login-user.dto';
 import * as bcrypt from 'bcryptjs';
 
@@ -35,6 +35,7 @@ export class AuthService {
       id: createdUser.id,
       email: createdUser.email,
     });
+
     return token;
   }
   async login(loginUserDto: LoginUserDto): Promise<string> {
@@ -60,7 +61,7 @@ export class AuthService {
 
     return token;
   }
-  private async generateJwt(payload: JwtPayload): Promise<string> {
+  private async generateJwt(payload: IJwtPayload): Promise<string> {
     return this.jwtService.signAsync({ id: payload.id, email: payload.email });
   }
   private async valiadatePassword(
