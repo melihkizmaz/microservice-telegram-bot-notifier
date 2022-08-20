@@ -11,9 +11,6 @@ async function bootstrap() {
 
   app.connectMicroservice({
     transport: Transport.TCP,
-    options: {
-      port: '0.0.0.0',
-    },
   });
 
   app.useGlobalPipes(new ValidationPipe());
