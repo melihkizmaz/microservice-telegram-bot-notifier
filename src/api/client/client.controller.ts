@@ -12,9 +12,9 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { TelegramClient } from '@prisma/client';
 import { Types } from 'mongoose';
-import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
-import { ICurrentUser } from 'src/auth/dto/current-user.interface';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { ICurrentUser } from '../../auth/dto/current-user.interface';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { ClientService } from './client.service';
 import { CreateClientDto } from './dto/create-client.dto';
 

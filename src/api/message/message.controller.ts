@@ -5,9 +5,9 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { CurrentUser } from 'src/auth/decorators/current-user.decorator';
-import { ICurrentUser } from 'src/auth/dto/current-user.interface';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { ICurrentUser } from '../../auth/dto/current-user.interface';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { SendMessageDto } from './dto/send-message.dto';
 import { MessageService } from './message.service';
 
