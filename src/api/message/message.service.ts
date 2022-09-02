@@ -1,5 +1,9 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { lastValueFrom, map } from 'rxjs';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -39,7 +43,7 @@ export class MessageService {
       )
       .pipe(map((res) => res.data));
     const result = await lastValueFrom($result).catch((err) => {
-      return err.response.data;
+      throw new ConflictException(err.response.data.description);
     });
 
     const messageData = {

@@ -17,7 +17,7 @@ export class MessageController {
 
   @UseGuards(JwtAuthGuard)
   @Post('send')
-  async create(
+  async sendMessage(
     @CurrentUser() user: ICurrentUser,
     @Body() sendMessageDto: SendMessageDto,
   ): Promise<any> {

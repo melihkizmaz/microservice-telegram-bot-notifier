@@ -1,7 +1,8 @@
-import { IsNotEmpty } from 'class-validator';
+import { IsNotEmpty, IsMongoId } from 'class-validator';
 
 export class SendMessageDto {
   @IsNotEmpty()
+  @IsMongoId()
   clientId: string;
 
   @IsNotEmpty()
