@@ -1,7 +1,7 @@
-import { Types } from 'mongoose';
+import * as bson from 'bson';
 
 export interface ICurrentUser {
-  id?: Types.ObjectId;
+  id?: bson.ObjectID;
 
   fullName: string;
 

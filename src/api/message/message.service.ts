@@ -1,13 +1,17 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Types } from 'mongoose';
 import { lastValueFrom, map } from 'rxjs';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../../prisma/prisma.service';
 import { WebhookService } from '../webhook/webhook.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { SendMessageDto } from './dto/send-message.dto';
 import { SendMessageResult } from './dto/sendMessage-result.interface';
+import * as bson from 'bson';
 
 @Injectable()
 export class MessageService {
@@ -21,7 +25,7 @@ export class MessageService {
     this.telegramBaseUrl = configService.get('telegramBaseUrl');
   }
   async sendMessage(
-    userId: Types.ObjectId,
+    userId: bson.ObjectID,
     sendMessageDto: SendMessageDto,
   ): Promise<SendMessageResult> {
     const client = await this.prisma.telegramClient.findUnique({
@@ -39,7 +43,7 @@ export class MessageService {
       )
       .pipe(map((res) => res.data));
     const result = await lastValueFrom($result).catch((err) => {
-      return err.response.data;
+      throw new ConflictException(err.response.data.description);
     });
 
     const messageData = {
