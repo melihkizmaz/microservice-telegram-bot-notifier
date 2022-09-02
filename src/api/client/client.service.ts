@@ -9,10 +9,10 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateClientDto } from './dto/create-client.dto';
 import { SetWebhookResult } from './dto/setwebhook-result.interface';
 import { lastValueFrom, map } from 'rxjs';
-import { Types } from 'mongoose';
 import { ConfigService } from '@nestjs/config';
 import { IGetMeResult } from '../message/dto/getme-result.inteface';
 import { ICreateClient } from './dto/create-client.interface';
+import * as bson from 'bson';
 
 @Injectable()
 export class ClientService {
@@ -48,14 +48,14 @@ export class ClientService {
       data: createObject,
     });
   }
-  async listClients(userId: Types.ObjectId): Promise<TelegramClient[]> {
+  async listClients(userId: bson.ObjectID): Promise<TelegramClient[]> {
     return await this.prisma.telegramClient.findMany({
       where: { userId: userId.toString() },
     });
   }
   async listClientById(
     id: string,
-    userId: Types.ObjectId,
+    userId: bson.ObjectID,
   ): Promise<TelegramClient> {
     await this.userPermissionGuard(id, userId);
 
@@ -71,7 +71,7 @@ export class ClientService {
   async updateClient(
     id: string,
     createClientDto: CreateClientDto,
-    userId: Types.ObjectId,
+    userId: bson.ObjectID,
   ): Promise<TelegramClient> {
     await this.userPermissionGuard(id, userId);
 
@@ -82,7 +82,7 @@ export class ClientService {
   }
   async deleteClient(
     id: string,
-    userId: Types.ObjectId,
+    userId: bson.ObjectID,
   ): Promise<TelegramClient> {
     await this.userPermissionGuard(id, userId);
 
@@ -100,11 +100,11 @@ export class ClientService {
     return result;
   }
   createMongoId(): string {
-    return new Types.ObjectId().toHexString();
+    return new bson.ObjectID().toHexString();
   }
   private async userPermissionGuard(
     clientId: string,
-    userId: Types.ObjectId,
+    userId: bson.ObjectID,
   ): Promise<void> {
     const client = await this.prisma.telegramClient.findUnique({
       where: { id: clientId.toString() },

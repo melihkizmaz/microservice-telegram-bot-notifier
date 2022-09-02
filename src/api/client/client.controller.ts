@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { TelegramClient } from '@prisma/client';
-import { Types } from 'mongoose';
+import { isMongoId } from 'class-validator';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { ICurrentUser } from '../../auth/dto/current-user.interface';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -63,8 +63,7 @@ export class ClientController {
     @CurrentUser() user: ICurrentUser,
     @Param('id') id: string,
   ): Promise<TelegramClient | string> {
-    if (!Types.ObjectId.isValid(id)) return 'Invalid id';
-
+    if (!isMongoId(id)) return 'Invalid id';
     return this.clientService.listClientById(id, user.id);
   }
 
@@ -75,7 +74,7 @@ export class ClientController {
     @Param('id') id: string,
     @Body() createClientDto: CreateClientDto,
   ): Promise<TelegramClient | string> {
-    if (!Types.ObjectId.isValid(id)) return 'Invalid id';
+    if (!isMongoId(id)) return 'Invalid id';
 
     return this.clientService.updateClient(id, createClientDto, user.id);
   }
@@ -86,7 +85,7 @@ export class ClientController {
     @CurrentUser() user: ICurrentUser,
     @Param('id') id: string,
   ): Promise<TelegramClient | string> {
-    if (!Types.ObjectId.isValid(id)) return 'Invalid id';
+    if (!isMongoId(id)) return 'Invalid id';
 
     return this.clientService.deleteClient(id, user.id);
   }
