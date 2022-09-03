@@ -1,6 +1,6 @@
 import { IsNotEmpty, IsMongoId } from 'class-validator';
 
-export class SendMessageDto {
+export class SendLocationDto {
   @IsNotEmpty()
   @IsMongoId()
   clientId: string;
@@ -9,5 +9,8 @@ export class SendMessageDto {
   chat_id: string;
 
   @IsNotEmpty()
-  text: string;
+  latitude: string;
+
+  @IsNotEmpty()
+  longitude: string;
 }
