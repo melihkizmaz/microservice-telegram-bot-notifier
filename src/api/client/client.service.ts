@@ -84,12 +84,33 @@ export class ClientService {
     id: string,
     userId: bson.ObjectID,
   ): Promise<TelegramClient> {
-    await this.userPermissionGuard(id, userId);
+    const clienToken = await this.userPermissionGuard(id, userId);
 
-    return await this.prisma.telegramClient.delete({ where: { id } });
+    await this.prisma.message.deleteMany({
+      where: { clientId: id },
+    });
+    const deleteWebhookResult = await this.deleteWebhook(
+      `${this.telegramBaseUrl}${clienToken}/setWebhook`,
+    );
+    if (!deleteWebhookResult.ok)
+      throw new ForbiddenException('Webhook could not be deleted');
+
+    const result = await this.prisma.telegramClient.delete({ where: { id } });
+
+    return result;
   }
 
   async setWebhook(url: string): Promise<SetWebhookResult> {
+    const $result = this.http
+      .get<SetWebhookResult>(url)
+      .pipe(map((res) => res.data));
+    const result = await lastValueFrom($result).catch((err) => {
+      return err.response.data;
+    });
+
+    return result;
+  }
+  async deleteWebhook(url: string): Promise<SetWebhookResult> {
     const $result = this.http
       .get<SetWebhookResult>(url)
       .pipe(map((res) => res.data));
@@ -105,12 +126,13 @@ export class ClientService {
   private async userPermissionGuard(
     clientId: string,
     userId: bson.ObjectID,
-  ): Promise<void> {
+  ): Promise<string> {
     const client = await this.prisma.telegramClient.findUnique({
       where: { id: clientId.toString() },
     });
     if (!client) throw new ForbiddenException('Client not found');
     if (client.userId.toString() !== userId.toString())
       throw new ForbiddenException('You are not allowed to access this client');
+    return client.token;
   }
 }

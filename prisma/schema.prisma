@@ -35,7 +35,12 @@ model Message{
   from Int
   to Int
   type String
-  text String
+  text String?
+  photo String?
+  mediaGroupId String?
+  caption String?
+  latitude Float?
+  longitude Float?
   client TelegramClient @relation(fields: [clientId], references: [id])
   clientId String @db.ObjectId
   createdAt DateTime
