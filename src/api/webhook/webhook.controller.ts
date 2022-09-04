@@ -64,6 +64,9 @@ export class WebhookController {
     });
     if (!messageData.type) return;
     await this.webhookService.createMessage(messageData);
-    this.webhookService.sendNotification(client.webHookUrl, messageData);
+    this.webhookService.sendNotification({
+      url: client.webHookUrl,
+      sendWebhookDto: messageData,
+    });
   }
 }

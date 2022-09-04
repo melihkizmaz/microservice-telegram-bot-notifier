@@ -4,7 +4,12 @@ import { ConfigService } from '@nestjs/config';
 import { lastValueFrom, map } from 'rxjs';
 
 type Method = 'get' | 'post';
-type Func = 'sendMessage' | 'sendMediaGroup' | 'sendLocation';
+type Func =
+  | 'sendMessage'
+  | 'sendMediaGroup'
+  | 'sendLocation'
+  | 'getMe'
+  | 'setWebhook';
 
 interface IFetch {
   method: Method;
@@ -29,21 +34,26 @@ export class FetchService {
   async fetch<T>({ method, base, params, body }: IFetch) {
     let url = `${this.telegramBaseUrl}${base.token}/${base.func}`;
     const urlParams = new URLSearchParams(params).toString();
+
     if (urlParams) {
       url = `${url}?${urlParams}`;
     }
+
     const $result = this.http[method]<T>(url, body).pipe(
       map((res) => res.data),
     );
+
     const result = await lastValueFrom($result).catch((err) => {
       throw new ForbiddenException(err.response.data.description);
     });
+
     return result;
   }
   async sendNotification<T>({ url, body }) {
     const $result = this.http.post<T>(url, body).pipe(map((res) => res.data));
+
     await lastValueFrom($result).catch((err) => {
-      throw new ForbiddenException(err.response.data.description);
+      console.log(err.response.data);
     });
   }
 }

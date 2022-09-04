@@ -21,9 +21,12 @@ export class MessageController {
   @Post('send-text')
   async sendMessage(
     @CurrentUser() user: ICurrentUser,
-    @Body() sendTextDto: SendTextDto,
+    @Body() sendMessageDto: SendTextDto,
   ): Promise<any> {
-    const result = await this.messageService.sendText(user.id, sendTextDto);
+    const result = await this.messageService.sendText({
+      userId: user.id,
+      sendMessageDto,
+    });
     if (!result.ok) throw new ForbiddenException(result.description);
 
     return result;
@@ -35,7 +38,10 @@ export class MessageController {
     @CurrentUser() user: ICurrentUser,
     @Body() sendImageDto: SendImageDto,
   ): Promise<any> {
-    const result = await this.messageService.sendImage(user.id, sendImageDto);
+    const result = await this.messageService.sendImage({
+      userId: user.id,
+      sendImageDto,
+    });
     if (!result.ok) throw new ForbiddenException(result.description);
 
     return result;
@@ -47,10 +53,10 @@ export class MessageController {
     @CurrentUser() user: ICurrentUser,
     @Body() sendLocationDto: SendLocationDto,
   ): Promise<any> {
-    const result = await this.messageService.sendLocation(
-      user.id,
+    const result = await this.messageService.sendLocation({
+      userId: user.id,
       sendLocationDto,
-    );
+    });
     if (!result.ok) throw new ForbiddenException(result.description);
 
     return result;
