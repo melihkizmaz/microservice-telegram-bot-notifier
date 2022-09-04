@@ -27,10 +27,13 @@ export class MessageService {
   ) {
     this.telegramBaseUrl = configService.get('telegramBaseUrl');
   }
-  async sendText(
-    userId: bson.ObjectID,
-    sendMessageDto: SendTextDto,
-  ): Promise<SendMessageResult> {
+  async sendText({
+    userId,
+    sendMessageDto,
+  }: {
+    userId: bson.ObjectID;
+    sendMessageDto: SendTextDto;
+  }): Promise<SendMessageResult> {
     const client = await this.prisma.telegramClient.findUnique({
       where: { id: sendMessageDto.clientId },
     });
@@ -62,21 +65,30 @@ export class MessageService {
 
     await this.createMessage(messageData);
 
-    await this.webhookService.sendNotification(client.webHookUrl, messageData);
+    await this.webhookService.sendNotification({
+      url: client.webHookUrl,
+      sendWebhookDto: messageData,
+    });
 
     return result;
   }
 
-  async sendImage(userId: bson.ObjectID, sendMessageDto: SendImageDto) {
+  async sendImage({
+    userId,
+    sendImageDto,
+  }: {
+    userId: bson.ObjectID;
+    sendImageDto: SendImageDto;
+  }) {
     const client = await this.prisma.telegramClient.findUnique({
-      where: { id: sendMessageDto.clientId },
+      where: { id: sendImageDto.clientId },
     });
     if (!client) throw new NotFoundException('Client not found');
     if (client.userId !== userId.toString())
       throw new NotFoundException(
         'You are not allowed to send message to this client',
       );
-    if (sendMessageDto.media.length > 10)
+    if (sendImageDto.media.length > 10)
       throw new ConflictException('You can send up to 10 images at once');
 
     const result = await this.fetchService.fetch<SendMultipleImageResult>({
@@ -86,36 +98,42 @@ export class MessageService {
         token: client.token,
       },
       body: {
-        chat_id: sendMessageDto.chat_id,
-        media: sendMessageDto.media,
+        chat_id: sendImageDto.chat_id,
+        media: sendImageDto.media,
       },
     });
     await Promise.all(
       result.result.map(async (item) => {
         const messageData = {
           from: Number(client.chat_id),
-          to: Number(sendMessageDto.chat_id),
+          to: Number(sendImageDto.chat_id),
           type: 'image',
           photo: item.photo.at(-1).file_id,
           mediaGroupId: item.media_group_id,
           createdAt: new Date(),
           clientId: client.id,
         };
-        if (sendMessageDto.media[0].caption)
-          messageData['caption'] = sendMessageDto.media[0].caption;
-        if (sendMessageDto.media.length <= 1) delete messageData.mediaGroupId;
+        if (sendImageDto.media[0].caption)
+          messageData['caption'] = sendImageDto.media[0].caption;
+        if (sendImageDto.media.length <= 1) delete messageData.mediaGroupId;
         await this.createMessage(messageData);
-        await this.webhookService.sendNotification(
-          client.webHookUrl,
-          messageData,
-        );
+        await this.webhookService.sendNotification({
+          url: client.webHookUrl,
+          sendWebhookDto: messageData,
+        });
       }),
     );
 
     return result;
   }
 
-  async sendLocation(userId: bson.ObjectID, sendLocationDto: SendLocationDto) {
+  async sendLocation({
+    userId,
+    sendLocationDto,
+  }: {
+    userId: bson.ObjectID;
+    sendLocationDto: SendLocationDto;
+  }) {
     const client = await this.prisma.telegramClient.findUnique({
       where: { id: sendLocationDto.clientId },
     });
@@ -150,7 +168,10 @@ export class MessageService {
 
     await this.createMessage(messageData);
 
-    this.webhookService.sendNotification(client.webHookUrl, messageData);
+    this.webhookService.sendNotification({
+      url: client.webHookUrl,
+      sendWebhookDto: messageData,
+    });
 
     return result;
   }

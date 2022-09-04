@@ -2,16 +2,10 @@ import { Module } from '@nestjs/common';
 import { ClientService } from './client.service';
 import { ClientController } from './client.controller';
 import { PrismaModule } from '../../prisma/prisma.module';
-import { HttpModule } from '@nestjs/axios';
+import { FetchModule } from '../../fetch/fetch.module';
 
 @Module({
-  imports: [
-    PrismaModule,
-    HttpModule.register({
-      timeout: 5000,
-      maxRedirects: 5,
-    }),
-  ],
+  imports: [PrismaModule, FetchModule],
   providers: [ClientService],
   controllers: [ClientController],
   exports: [ClientService],

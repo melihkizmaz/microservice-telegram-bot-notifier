@@ -21,13 +21,11 @@ import { CreateClientDto } from './dto/create-client.dto';
 @Controller('client')
 export class ClientController {
   private baseUrl: string;
-  private telegramBaseUrl: string;
   constructor(
     private readonly clientService: ClientService,
     private readonly configService: ConfigService,
   ) {
     this.baseUrl = configService.get('baseUrl');
-    this.telegramBaseUrl = configService.get('telegramBaseUrl');
   }
 
   @UseGuards(JwtAuthGuard)
@@ -38,17 +36,20 @@ export class ClientController {
   ): Promise<TelegramClient> {
     const id = this.clientService.createMongoId();
 
-    const setWebhookResult = await this.clientService.setWebhook(
-      `${this.telegramBaseUrl}${createClientDto.token}/setWebhook?url=${this.baseUrl}/webhook/${id}`,
-    );
-    if (!setWebhookResult.ok)
-      throw new ForbiddenException(setWebhookResult.description);
-
-    return this.clientService.createClient({
+    const client = this.clientService.createClient({
       _id: id,
       ...createClientDto,
       userId: user.id.toString(),
     });
+
+    const setWebhookResult = await this.clientService.setWebhook({
+      token: createClientDto.token,
+      url: `${this.baseUrl}/webhook/${id}`,
+    });
+    if (!setWebhookResult.ok)
+      throw new ForbiddenException(setWebhookResult.description);
+
+    return client;
   }
 
   @UseGuards(JwtAuthGuard)
@@ -64,7 +65,7 @@ export class ClientController {
     @Param('id') id: string,
   ): Promise<TelegramClient | string> {
     if (!isMongoId(id)) return 'Invalid id';
-    return this.clientService.listClientById(id, user.id);
+    return this.clientService.listClientById({ id, userId: user.id });
   }
 
   @UseGuards(JwtAuthGuard)
@@ -76,7 +77,11 @@ export class ClientController {
   ): Promise<TelegramClient | string> {
     if (!isMongoId(id)) return 'Invalid id';
 
-    return this.clientService.updateClient(id, createClientDto, user.id);
+    return this.clientService.updateClient({
+      id,
+      createClientDto,
+      userId: user.id,
+    });
   }
 
   @UseGuards(JwtAuthGuard)
@@ -87,6 +92,6 @@ export class ClientController {
   ): Promise<TelegramClient | string> {
     if (!isMongoId(id)) return 'Invalid id';
 
-    return this.clientService.deleteClient(id, user.id);
+    return this.clientService.deleteClient({ id, userId: user.id });
   }
 }
