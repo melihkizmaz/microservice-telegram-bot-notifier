@@ -1,11 +1,9 @@
-import { HttpService } from '@nestjs/axios';
 import {
   Injectable,
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { lastValueFrom, map } from 'rxjs';
 import { PrismaService } from '../../prisma/prisma.service';
 import { WebhookService } from '../webhook/webhook.service';
 import { CreateMessageDto } from './dto/create-message.dto';
@@ -13,19 +11,19 @@ import { SendTextDto } from './dto/send-text.dto';
 import { SendImageDto } from './dto/send-image.dto';
 import { SendMessageResult } from './dto/sendMessage-result.interface';
 import * as bson from 'bson';
-import { SendImageResult } from './dto/sendImage-result.interface';
 import { SendLocationDto } from './dto/send.location.dto';
 import { SendLocationResult } from './dto/sendLocation-result.interface';
 import { SendMultipleImageResult } from './dto/sendMultipleImage-result.interface';
+import { FetchService } from '../../fetch/fetch.service';
 
 @Injectable()
 export class MessageService {
   private telegramBaseUrl: string;
   constructor(
     private readonly prisma: PrismaService,
-    private readonly http: HttpService,
     private readonly webhookService: WebhookService,
     private readonly configService: ConfigService,
+    private readonly fetchService: FetchService,
   ) {
     this.telegramBaseUrl = configService.get('telegramBaseUrl');
   }
@@ -41,14 +39,16 @@ export class MessageService {
       throw new NotFoundException(
         'You are not allowed to send message to this client',
       );
-
-    const $result = this.http
-      .get<SendMessageResult>(
-        `${this.telegramBaseUrl}${client.token}/sendMessage?chat_id=${sendMessageDto.chat_id}&text=${sendMessageDto.text}`,
-      )
-      .pipe(map((res) => res.data));
-    const result = await lastValueFrom($result).catch((err) => {
-      throw new ConflictException(err.response.data.description);
+    const result = await this.fetchService.fetch<SendMessageResult>({
+      method: 'get',
+      base: {
+        func: 'sendMessage',
+        token: client.token,
+      },
+      params: {
+        chat_id: sendMessageDto.chat_id,
+        text: sendMessageDto.text,
+      },
     });
 
     const messageData = {
@@ -79,77 +79,40 @@ export class MessageService {
     if (sendMessageDto.media.length > 10)
       throw new ConflictException('You can send up to 10 images at once');
 
-    if (sendMessageDto.media.length === 1) {
-      const $result = this.http
-        .post<SendImageResult>(
-          `${this.telegramBaseUrl}${client.token}/sendPhoto`,
-          {
-            photo: sendMessageDto.media[0].media,
-            chat_id: sendMessageDto.chat_id,
-            caption: sendMessageDto.media[0].caption,
-          },
-        )
-        .pipe(map((res) => res.data));
-      const result = await lastValueFrom($result).catch((err) => {
-        throw new ConflictException(err.response.data.description);
-      });
-
-      const messageData = {
-        from: Number(client.chat_id),
-        to: Number(sendMessageDto.chat_id),
-        type: 'image',
-        photo: result.result.photo[result.result.photo.length - 1].file_id,
-        createdAt: new Date(),
-        clientId: client.id,
-      };
-      if (sendMessageDto.media[0].caption)
-        messageData['caption'] = sendMessageDto.media[0].caption;
-
-      await this.createMessage(messageData);
-
-      await this.webhookService.sendNotification(
-        client.webHookUrl,
-        messageData,
-      );
-      return result;
-    }
-    if (sendMessageDto.media.length > 1) {
-      const $result = this.http
-        .post<SendMultipleImageResult>(
-          `${this.telegramBaseUrl}${client.token}/sendMediaGroup`,
-          {
-            chat_id: sendMessageDto.chat_id,
-            media: sendMessageDto.media,
-          },
-        )
-        .pipe(map((res) => res.data));
-      const result = await lastValueFrom($result).catch((err) => {
-        throw new ConflictException(err.response.data.description);
-      });
+    const result = await this.fetchService.fetch<SendMultipleImageResult>({
+      method: 'post',
+      base: {
+        func: 'sendMediaGroup',
+        token: client.token,
+      },
+      body: {
+        chat_id: sendMessageDto.chat_id,
+        media: sendMessageDto.media,
+      },
+    });
+    await Promise.all(
       result.result.map(async (item) => {
-        setTimeout(async () => {
-          const messageData = {
-            from: Number(client.chat_id),
-            to: Number(sendMessageDto.chat_id),
-            type: 'image',
-            photo: item.photo[item.photo.length - 1].file_id,
-            mediaGroupId: item.media_group_id,
-            createdAt: new Date(),
-            clientId: client.id,
-          };
-          if (sendMessageDto.media[0].caption)
-            messageData['caption'] = sendMessageDto.media[0].caption;
+        const messageData = {
+          from: Number(client.chat_id),
+          to: Number(sendMessageDto.chat_id),
+          type: 'image',
+          photo: item.photo.at(-1).file_id,
+          mediaGroupId: item.media_group_id,
+          createdAt: new Date(),
+          clientId: client.id,
+        };
+        if (sendMessageDto.media[0].caption)
+          messageData['caption'] = sendMessageDto.media[0].caption;
+        if (sendMessageDto.media.length <= 1) delete messageData.mediaGroupId;
+        await this.createMessage(messageData);
+        await this.webhookService.sendNotification(
+          client.webHookUrl,
+          messageData,
+        );
+      }),
+    );
 
-          await this.createMessage(messageData);
-
-          await this.webhookService.sendNotification(
-            client.webHookUrl,
-            messageData,
-          );
-        }, 500);
-      });
-      return result;
-    }
+    return result;
   }
 
   async sendLocation(userId: bson.ObjectID, sendLocationDto: SendLocationDto) {
@@ -162,18 +125,17 @@ export class MessageService {
         'You are not allowed to send message to this client',
       );
 
-    const $result = this.http
-      .post<SendLocationResult>(
-        `${this.telegramBaseUrl}${client.token}/sendLocation`,
-        {
-          chat_id: sendLocationDto.chat_id,
-          latitude: sendLocationDto.latitude,
-          longitude: sendLocationDto.longitude,
-        },
-      )
-      .pipe(map((res) => res.data));
-    const result = await lastValueFrom($result).catch((err) => {
-      throw new ConflictException(err.response.data.description);
+    const result = await this.fetchService.fetch<SendLocationResult>({
+      method: 'post',
+      base: {
+        func: 'sendLocation',
+        token: client.token,
+      },
+      body: {
+        chat_id: sendLocationDto.chat_id,
+        latitude: sendLocationDto.latitude,
+        longitude: sendLocationDto.longitude,
+      },
     });
 
     const messageData = {
@@ -188,7 +150,7 @@ export class MessageService {
 
     await this.createMessage(messageData);
 
-    await this.webhookService.sendNotification(client.webHookUrl, messageData);
+    this.webhookService.sendNotification(client.webHookUrl, messageData);
 
     return result;
   }

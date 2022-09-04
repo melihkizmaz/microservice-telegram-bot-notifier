@@ -1,6 +1,5 @@
-import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
-import { lastValueFrom } from 'rxjs';
+import { FetchService } from '../../fetch/fetch.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateMessageDto } from '../message/dto/create-message.dto';
 import { ISendNotification } from './dto/send-notification.interface';
@@ -9,7 +8,7 @@ import { ISendNotification } from './dto/send-notification.interface';
 export class WebhookService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly http: HttpService,
+    private readonly fetchService: FetchService,
   ) {}
   async createMessage(createMessage: CreateMessageDto) {
     return await this.prisma.message.create({ data: createMessage });
@@ -19,8 +18,9 @@ export class WebhookService {
     const filteredNotificationDto = { ...sendWebhookDto };
 
     delete filteredNotificationDto.clientId;
-
-    const $result = this.http.post<void>(url, filteredNotificationDto);
-    await lastValueFrom($result);
+    await this.fetchService.sendNotification<void>({
+      url: url,
+      body: filteredNotificationDto,
+    });
   }
 }
