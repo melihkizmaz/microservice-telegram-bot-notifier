@@ -8,6 +8,7 @@ import configuration from './config/configuration';
 import { APP_FILTER } from '@nestjs/core';
 import { AllExceptionsFilter } from './filters/all-exeption.filter';
 import { AuthModule } from './auth/auth.module';
+import { FetchModule } from './fetch/fetch.module';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { AuthModule } from './auth/auth.module';
     MessageModule,
     WebhookModule,
     AuthModule,
+    FetchModule,
   ],
   controllers: [],
   providers: [

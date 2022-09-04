@@ -5,6 +5,7 @@ import {
   Param,
   Post,
 } from '@nestjs/common';
+import { Message } from '@prisma/client';
 import { ClientService } from '../client/client.service';
 import { IMessageData } from './dto/telegram-webhook.interface';
 import { WebhookService } from './webhook.service';
@@ -23,57 +24,46 @@ export class WebhookController {
   ): Promise<void> {
     const client = await this.clientService.listClientByIdForWebhook(id);
     if (!client) throw new NotFoundException('Client not found');
-    let messageData;
+
+    const messageData: Omit<Message, 'id'> = {
+      from: Number(messageBody.message.from.id),
+      to: Number(client.chat_id),
+      createdAt: new Date(),
+      clientId: client.id,
+      mediaGroupId: null,
+      caption: null,
+      longitude: null,
+      latitude: null,
+      text: null,
+      photo: null,
+      type: '',
+    };
 
     if (messageBody.message.text) {
-      const textData = {
-        from: Number(messageBody.message.from.id),
-        to: Number(client.chat_id),
-        type: 'text',
-        text: messageBody.message.text,
-        createdAt: new Date(),
-        clientId: client.id,
-      };
-
-      messageData = { ...textData };
+      messageData.type = 'text';
+      messageData.text = messageBody.message.text;
     }
 
     if (messageBody.message.photo) {
-      const photoData = {
-        from: Number(messageBody.message.from.id),
-        to: Number(client.chat_id),
-        type: 'image',
-        photo:
-          messageBody.message.photo[messageBody.message.photo.length - 1]
-            .file_id,
-
-        caption: messageBody.message.caption,
-        createdAt: new Date(),
-        clientId: client.id,
-        mediaGroupId: messageBody.message.media_group_id,
-      };
-      messageData = { ...photoData };
+      messageData.type = 'image';
+      messageData.photo = messageBody.message.photo.at(-1).file_id;
+      messageData.caption = messageBody.message?.caption;
+      messageData.mediaGroupId = messageBody.message?.media_group_id;
     }
 
     if (messageBody.message.location) {
-      const locationData = {
-        from: Number(messageBody.message.from.id),
-        to: Number(client.chat_id),
-        type: 'location',
-        latitude: messageBody.message.location.latitude,
-        longitude: messageBody.message.location.longitude,
-        createdAt: new Date(),
-        clientId: client.id,
-      };
-
-      messageData = { ...locationData };
+      messageData.type = 'location';
+      messageData.latitude = messageBody.message.location.latitude;
+      messageData.latitude = messageBody.message.location.longitude;
     }
 
-    if (!messageBody.message.caption) delete messageData.caption;
-    if (!messageBody.message.media_group_id) delete messageData.mediaGroupId;
-
+    Object.keys(messageData).forEach((key) => {
+      if (!messageData[key]) {
+        delete messageData[key];
+      }
+    });
+    if (!messageData.type) return;
     await this.webhookService.createMessage(messageData);
-
-    await this.webhookService.sendNotification(client.webHookUrl, messageData);
+    this.webhookService.sendNotification(client.webHookUrl, messageData);
   }
 }

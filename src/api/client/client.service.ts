@@ -29,7 +29,9 @@ export class ClientService {
     const $getMeResult = this.http
       .get<IGetMeResult>(`${this.telegramBaseUrl}${createClient.token}/getMe`)
       .pipe(map((res) => res.data));
-    const getMeResult = await lastValueFrom($getMeResult);
+    const getMeResult = await lastValueFrom($getMeResult).catch((err) => {
+      throw new ForbiddenException(err.response.data);
+    });
     if (!getMeResult.ok) throw new ForbiddenException(getMeResult.description);
 
     const client = await this.prisma.telegramClient.findFirst({
@@ -105,7 +107,7 @@ export class ClientService {
       .get<SetWebhookResult>(url)
       .pipe(map((res) => res.data));
     const result = await lastValueFrom($result).catch((err) => {
-      return err.response.data;
+      throw new ForbiddenException(err.response.data);
     });
 
     return result;
@@ -115,7 +117,7 @@ export class ClientService {
       .get<SetWebhookResult>(url)
       .pipe(map((res) => res.data));
     const result = await lastValueFrom($result).catch((err) => {
-      return err.response.data;
+      throw new ForbiddenException(err.response.data);
     });
 
     return result;
