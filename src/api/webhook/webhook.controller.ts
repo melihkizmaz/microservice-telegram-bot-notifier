@@ -21,9 +21,19 @@ export class WebhookController {
   async webhook(
     @Body() messageBody: IMessageData,
     @Param('id') id: string,
-  ): Promise<void> {
+  ): Promise<void | string> {
     const client = await this.clientService.listClientByIdForWebhook(id);
     if (!client) throw new NotFoundException('Client not found');
+
+    if (
+      !(
+        !!messageBody?.message?.text ||
+        !!messageBody?.message?.photo ||
+        !!messageBody?.message?.location
+      )
+    ) {
+      return 'undefined message type';
+    }
 
     const messageData: Omit<Message, 'id'> = {
       from: Number(messageBody.message.from.id),
