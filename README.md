@@ -8,6 +8,7 @@
 
 - NestJS
   - Deployed on [<ins>heroku</ins>](https://telegram-notifer.herokuapp.com/).
+- Prisma
 - MongoDB
   - Deployed on Atlas.
 
