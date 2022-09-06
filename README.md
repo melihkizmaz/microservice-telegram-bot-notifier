@@ -31,7 +31,7 @@ $ npm install
 
 ## Running the app
 
-Please fill in the sample environments in the env.examle file before starting the application.
+Please fill in the sample environments in the env.example file and rename the file to .env before starting the application
 Enter a link to BASE_URL environment that your localhost's telegram api can reach. You can use [<ins>Ngrok</ins>](https://ngrok.com/) for this.
 
 ```bash
