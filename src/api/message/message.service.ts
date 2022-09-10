@@ -1,9 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-} from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { WebhookService } from '../webhook/webhook.service';
 import { CreateMessageDto } from './dto/create-message.dto';
@@ -18,15 +13,11 @@ import { FetchService } from '../../fetch/fetch.service';
 
 @Injectable()
 export class MessageService {
-  private telegramBaseUrl: string;
   constructor(
     private readonly prisma: PrismaService,
     private readonly webhookService: WebhookService,
-    private readonly configService: ConfigService,
     private readonly fetchService: FetchService,
-  ) {
-    this.telegramBaseUrl = configService.get('telegramBaseUrl');
-  }
+  ) {}
   async sendText({
     userId,
     sendMessageDto,
@@ -34,14 +25,10 @@ export class MessageService {
     userId: bson.ObjectID;
     sendMessageDto: SendTextDto;
   }): Promise<SendMessageResult> {
-    const client = await this.prisma.telegramClient.findUnique({
-      where: { id: sendMessageDto.clientId },
+    const client = await this.checkPermisionAndGetClient({
+      clientId: sendMessageDto.clientId,
+      userId,
     });
-    if (!client) throw new NotFoundException('Client not found');
-    if (client.userId !== userId.toString())
-      throw new NotFoundException(
-        'You are not allowed to send message to this client',
-      );
     const result = await this.fetchService.fetch<SendMessageResult>({
       method: 'get',
       base: {
@@ -80,16 +67,10 @@ export class MessageService {
     userId: bson.ObjectID;
     sendImageDto: SendImageDto;
   }) {
-    const client = await this.prisma.telegramClient.findUnique({
-      where: { id: sendImageDto.clientId },
+    const client = await this.checkPermisionAndGetClient({
+      clientId: sendImageDto.clientId,
+      userId,
     });
-    if (!client) throw new NotFoundException('Client not found');
-    if (client.userId !== userId.toString())
-      throw new NotFoundException(
-        'You are not allowed to send message to this client',
-      );
-    if (sendImageDto.media.length > 10)
-      throw new ConflictException('You can send up to 10 images at once');
 
     const result = await this.fetchService.fetch<SendMultipleImageResult>({
       method: 'post',
@@ -134,14 +115,10 @@ export class MessageService {
     userId: bson.ObjectID;
     sendLocationDto: SendLocationDto;
   }) {
-    const client = await this.prisma.telegramClient.findUnique({
-      where: { id: sendLocationDto.clientId },
+    const client = await this.checkPermisionAndGetClient({
+      clientId: sendLocationDto.clientId,
+      userId,
     });
-    if (!client) throw new NotFoundException('Client not found');
-    if (client.userId !== userId.toString())
-      throw new NotFoundException(
-        'You are not allowed to send message to this client',
-      );
 
     const result = await this.fetchService.fetch<SendLocationResult>({
       method: 'post',
@@ -176,9 +153,23 @@ export class MessageService {
     return result;
   }
 
-  async createMessage(createMessageDto: CreateMessageDto): Promise<void> {
+  private async createMessage(
+    createMessageDto: CreateMessageDto,
+  ): Promise<void> {
     await this.prisma.message.create({
       data: createMessageDto,
     });
+  }
+
+  private async checkPermisionAndGetClient({ clientId, userId }) {
+    const client = await this.prisma.telegramClient.findUnique({
+      where: { id: clientId },
+    });
+    if (!client) throw new NotFoundException('Client not found');
+    if (client.userId !== userId.toString())
+      throw new NotFoundException(
+        'You are not allowed to send message to this client',
+      );
+    return client;
   }
 }
