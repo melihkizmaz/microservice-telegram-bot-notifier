@@ -2,14 +2,12 @@ import {
   Body,
   Controller,
   Delete,
-  ForbiddenException,
   Get,
   Param,
   Patch,
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { TelegramClient } from '@prisma/client';
 import { isMongoId } from 'class-validator';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
@@ -20,13 +18,7 @@ import { CreateClientDto } from './dto/create-client.dto';
 
 @Controller('client')
 export class ClientController {
-  private baseUrl: string;
-  constructor(
-    private readonly clientService: ClientService,
-    private readonly configService: ConfigService,
-  ) {
-    this.baseUrl = configService.get('baseUrl');
-  }
+  constructor(private readonly clientService: ClientService) {}
 
   @UseGuards(JwtAuthGuard)
   @Post('create')
@@ -34,22 +26,10 @@ export class ClientController {
     @CurrentUser() user: ICurrentUser,
     @Body() createClientDto: CreateClientDto,
   ): Promise<TelegramClient> {
-    const id = this.clientService.createMongoId();
-
-    const client = this.clientService.createClient({
-      _id: id,
+    return this.clientService.createClient({
       ...createClientDto,
       userId: user.id.toString(),
     });
-
-    const setWebhookResult = await this.clientService.setWebhook({
-      token: createClientDto.token,
-      url: `${this.baseUrl}/webhook/${id}`,
-    });
-    if (!setWebhookResult.ok)
-      throw new ForbiddenException(setWebhookResult.description);
-
-    return client;
   }
 
   @UseGuards(JwtAuthGuard)
