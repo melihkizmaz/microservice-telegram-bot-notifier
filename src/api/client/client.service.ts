@@ -11,13 +11,18 @@ import { IGetMeResult } from '../message/dto/getme-result.inteface';
 import { ICreateClient } from './dto/create-client.interface';
 import { FetchService } from '../../fetch/fetch.service';
 import * as bson from 'bson';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ClientService {
+  private baseUrl: string;
   constructor(
     private readonly prisma: PrismaService,
     private readonly fetchService: FetchService,
-  ) {}
+    private readonly configService: ConfigService,
+  ) {
+    this.baseUrl = configService.get('baseUrl');
+  }
 
   async createClient(createClient: ICreateClient): Promise<TelegramClient> {
     const getMeResult = await this.fetchService.fetch<IGetMeResult>({
@@ -30,23 +35,29 @@ export class ClientService {
 
     if (!getMeResult.ok) throw new ForbiddenException(getMeResult.description);
 
-    const client = await this.prisma.telegramClient.findFirst({
+    const existClient = await this.prisma.telegramClient.findFirst({
       where: { token: createClient.token },
     });
 
-    if (client) throw new ConflictException('Client token already used');
+    if (existClient) throw new ConflictException('Client token already used');
 
     const createObject = {
-      id: createClient._id,
       chat_id: getMeResult.result.id,
       ...createClient,
     };
 
-    delete createObject._id;
-
-    return await this.prisma.telegramClient.create({
+    const newClient = await this.prisma.telegramClient.create({
       data: createObject,
     });
+    const setWebhookResult = await this.setWebhook({
+      token: newClient.token,
+      url: `${this.baseUrl}/webhook/${newClient.id}`,
+    });
+
+    if (!setWebhookResult.ok)
+      throw new ForbiddenException(setWebhookResult.description);
+
+    return newClient;
   }
   async listClients(userId: bson.ObjectID): Promise<TelegramClient[]> {
     return await this.prisma.telegramClient.findMany({
@@ -134,10 +145,6 @@ export class ClientService {
       method: 'get',
       base: { func: 'setWebhook', token },
     });
-  }
-
-  createMongoId(): string {
-    return new bson.ObjectID().toHexString();
   }
 
   private async userPermissionGuard({
