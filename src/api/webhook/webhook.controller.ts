@@ -64,7 +64,7 @@ export class WebhookController {
     if (messageBody.message.location) {
       messageData.type = 'location';
       messageData.latitude = messageBody.message.location.latitude;
-      messageData.latitude = messageBody.message.location.longitude;
+      messageData.longitude = messageBody.message.location.longitude;
     }
 
     Object.keys(messageData).forEach((key) => {
